@@ -33,178 +33,57 @@ namespace Tutorial
     /// <summary>
     /// Demonstrates how to use Solace Systems Messaging API for receiving a request and sending a reply 
     /// </summary>
-    class BasicReplier : IDisposable
+    class BasicReplier
     {
-        string VPNName { get; set; }
-        string UserName { get; set; }
-        string Password { get; set; }
+        const int DefaultConnectRetries = 3;
+        private readonly AutoResetEvent messageReceivedEvent = new AutoResetEvent(false);
 
-        const int DefaultReconnectRetries = 3;
-
-        private ISession Session = null;
-        private EventWaitHandle WaitEventWaitHandle = new AutoResetEvent(false);
-
-        void Run(IContext context, string host)
+        public void Run(string host, string vpnname, string username, string password)
         {
-            // Validate parameters
-            if (context == null)
+            try
             {
-                throw new ArgumentException("Solace Systems API context Router must be not null.", "context");
-            }
-            if (string.IsNullOrWhiteSpace(host))
-            {
-                throw new ArgumentException("Solace Messaging Router host name must be non-empty.", "host");
-            }
-            if (string.IsNullOrWhiteSpace(VPNName))
-            {
-                throw new InvalidOperationException("VPN name must be non-empty.");
-            }
-            if (string.IsNullOrWhiteSpace(UserName))
-            {
-                throw new InvalidOperationException("Client username must be non-empty.");
-            }
-
-            // Create session properties
-            SessionProperties sessionProps = new SessionProperties()
-            {
-                Host = host,
-                VPNName = VPNName,
-                UserName = UserName,
-                Password = Password,
-                ReconnectRetries = DefaultReconnectRetries
-            };
-
-            // Connect to the Solace messaging router
-            Console.WriteLine("Connecting as {0}@{1} on {2}...", UserName, VPNName, host);
-            // NOTICE HandleRequestMessage as the message event handler
-            Session = context.CreateSession(sessionProps, HandleRequestMessage, null);
-            ReturnCode returnCode = Session.Connect();
-            if (returnCode == ReturnCode.SOLCLIENT_OK)
-            {
-                Console.WriteLine("Session successfully connected.");
-
-                // This is the topic on Solace messaging router where a request is placed
-                // The reply must subscribe to it to receive requests
-                Session.Subscribe(ContextFactory.Instance.CreateTopic("tutorial/requests"), true);
-
-                Console.WriteLine("Waiting for a request to come in...");
-                WaitEventWaitHandle.WaitOne();
-            }
-            else
-            {
-                Console.WriteLine("Error connecting, return code: {0}", returnCode);
-            }
-        }
-
-        /// <summary>
-        /// This event handler is invoked by Solace Systems Messaging API when a message arrives
-        /// </summary>
-        /// <param name="source"></param>
-        /// <param name="args"></param>
-        private void HandleRequestMessage(object source, MessageEventArgs args)
-        {
-            Console.WriteLine("Received request.");
-            // Received a request message
-            using (IMessage requestMessage = args.Message)
-            {
-                // Expecting the request content as a binary attachment
-                Console.WriteLine("Request content: {0}", Encoding.ASCII.GetString(requestMessage.BinaryAttachment));
-                // Create reply message
-                using (IMessage replyMessage = ContextFactory.Instance.CreateMessage())
+                // Initialize Solace Systems Messaging API with logging to console at Warning level
+                var props = new ContextFactoryProperties() { SolClientLogLevel = SolLogLevel.Warning };
+                props.LogToConsoleError();
+                ContextFactory.Instance.Init(props);
+                
+                // Define context and session properties
+                var contextProperties = new ContextProperties();
+                var sessionProperties = new SessionProperties()
                 {
-                    // Set the reply content as a binary attachment 
-                    replyMessage.BinaryAttachment = Encoding.ASCII.GetBytes("Sample Reply");
-                    Console.WriteLine("Sending reply...");
-                    ReturnCode returnCode = Session.SendReply(requestMessage, replyMessage);
-                    if (returnCode == ReturnCode.SOLCLIENT_OK)
+                    Host = host,
+                    VPNName = vpnname,
+                    UserName = username,
+                    Password = password,
+                    ConnectRetries = DefaultConnectRetries,
+                };
+                
+                // Create context and session instances
+                using (var context = ContextFactory.Instance.CreateContext(contextProperties, null))
+                using (var session = context.CreateSession(sessionProperties, HandleRequestMessage, null))
+                {
+                    // Connect to the Solace messaging router
+                    Console.WriteLine($"Connecting as {username}@{vpnname} on {host}...");
+                    var connectResult = session.Connect();
+
+                    if (connectResult == ReturnCode.SOLCLIENT_OK)
                     {
-                        Console.WriteLine("Sent.");
+                        Console.WriteLine("Session successfully connected.");
+
+                        // Create a topic and subscribe to it
+                        using (var topic = ContextFactory.Instance.CreateTopic("tutorial/requests"))
+                        {
+                            session.Subscribe(topic, true);
+
+                            Console.WriteLine("Waiting for a request to come in...");
+                            messageReceivedEvent.WaitOne();
+                        }
                     }
                     else
                     {
-                        Console.WriteLine("Reply failed, return code: {0}", returnCode);
-                    }
-                    // finish the program
-                    WaitEventWaitHandle.Set();
-                }
-            }
-        }
-
-        #region IDisposable Support
-        private bool disposedValue = false;
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    if (Session != null)
-                    {
-                        Session.Dispose();
+                        Console.WriteLine($"Error connecting, return code: {connectResult}");
                     }
                 }
-                disposedValue = true;
-            }
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-        }
-        #endregion
-
-        #region Main
-        static void Main(string[] args)
-        {
-            if (args.Length < 3)
-            {
-                Console.WriteLine("Usage: TopicPublisher <host> <username>@<vpnname> <password>");
-                Environment.Exit(1);
-            }
-
-            string[] split = args[1].Split('@');
-            if (split.Length != 2)
-            {
-                Console.WriteLine("Usage: TopicPublisher <host> <username>@<vpnname> <password>");
-                Environment.Exit(1);
-            }
-
-            string host = args[0]; // Solace messaging router host name or IP address
-            string username = split[0];
-            string vpnname = split[1];
-            string password = args[2];
-
-            // Initialize Solace Systems Messaging API with logging to console at Warning level
-            ContextFactoryProperties cfp = new ContextFactoryProperties()
-            {
-                SolClientLogLevel = SolLogLevel.Warning
-            };
-            cfp.LogToConsoleError();
-            ContextFactory.Instance.Init(cfp);
-
-            try
-            {
-                // Context must be created first
-                using (IContext context = ContextFactory.Instance.CreateContext(new ContextProperties(), null))
-                {
-                    // Create the application
-                    using (BasicReplier basicReplier = new BasicReplier()
-                    {
-                        VPNName = vpnname,
-                        UserName = username,
-                        Password = password
-                    })
-                    {
-                        // Run the application within the context and against the host
-                        basicReplier.Run(context, host);
-                    }
-
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Exception thrown: {0}", ex.Message);
             }
             finally
             {
@@ -213,7 +92,46 @@ namespace Tutorial
             }
             Console.WriteLine("Finished.");
         }
-        #endregion
+
+
+
+
+        /// <summary>
+        /// This event handler is invoked by Solace Systems Messaging API when a message arrives
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="args"></param>
+        private void HandleRequestMessage(object source, MessageEventArgs args)
+        { 
+            Console.WriteLine("Received request.");
+            var session = source as ISession;
+
+            // Received a request message
+            using (IMessage requestMessage = args.Message)
+            {
+                // Expecting the request content as a binary attachment
+                Console.WriteLine($"Request content: {Encoding.UTF8.GetString(requestMessage.BinaryAttachment)}");
+                // Create reply message
+                using (IMessage replyMessage = ContextFactory.Instance.CreateMessage())
+                {
+                    // Set the reply content as a binary attachment 
+                    replyMessage.BinaryAttachment = Encoding.UTF8.GetBytes("Sample Reply");
+                    Console.WriteLine("Sending reply...");
+                    var sendReplyResult = session.SendReply(requestMessage, replyMessage);
+                    if (sendReplyResult == ReturnCode.SOLCLIENT_OK)
+                    {
+                        Console.WriteLine("Sent.");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Reply failed, return code: {sendReplyResult}");
+                    }
+                    // finish the program
+                    messageReceivedEvent.Set();
+                }
+            }
+        }
+
     }
 
 }
