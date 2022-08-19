@@ -21,7 +21,9 @@
 
 using System;
 using System.Text;
+
 using SolaceSystems.Solclient.Messaging;
+using Tutorial.Common;
 
 /// <summary>
 /// Solace Systems Messaging API tutorial: BasicRequestor
@@ -34,10 +36,18 @@ namespace Tutorial
     /// </summary>
     class BasicRequestor
     {
-        const int TimeoutSeconds = 5;
-        const int DefaultConnectRetries = 3;
+        static readonly int TimeoutSeconds = 5;
+        static readonly int DefaultConnectRetries = 3;
 
-        public void Run(string host, string vpnname, string username, string password)
+        static void Main(string[] args)
+        {
+            if (CommandLine.TryLoadConfig(args, out var config))
+            {
+                Run(config.Host, config.Vpn, config.UserName, config.Password);
+            }
+        }
+
+        static void Run(string host, string vpnname, string username, string password)
         {
             try
             {

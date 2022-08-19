@@ -20,15 +20,15 @@
 #endregion
 
 using System;
-using System.Linq;
 using System.Text;
-using SolaceSystems.Solclient.Messaging;
 using System.Threading;
+
+using SolaceSystems.Solclient.Messaging;
+using Tutorial.Common;
 
 /// <summary>
 /// Solace Systems Messaging API tutorial: TopicToQueueMapping
 /// </summary>
-
 namespace Tutorial
 {
     /// <summary>
@@ -36,12 +36,19 @@ namespace Tutorial
     /// </summary>
     class TopicToQueueMapping
     {
-        const int DefaultConnectRetries = 3;
-        const int TotalMessages = 5;
+        static readonly int DefaultConnectRetries = 3;
+        static readonly int TotalMessages = 5;
+        static readonly CountdownEvent CountdownEvent = new CountdownEvent(TotalMessages);
 
-        CountdownEvent CountdownEvent = new CountdownEvent(TotalMessages);
+        static void Main(string[] args)
+        {
+            if (CommandLine.TryLoadConfig(args, out var config))
+            {
+                Run(config.Host, config.Vpn, config.UserName, config.Password);
+            }
+        }
 
-        public void Run(string host, string vpnname, string username, string password)
+        static void Run(string host, string vpnname, string username, string password)
         {
             try
             {
@@ -178,7 +185,7 @@ namespace Tutorial
         /// <summary>
         /// This event handler is invoked by Solace Systems Messaging API when a message arrives
         /// </summary>
-        private void HandleMessageEvent(object source, MessageEventArgs args)
+        static void HandleMessageEvent(object source, MessageEventArgs args)
         {
             var flow = source as IFlow;
             // Received a message
@@ -196,7 +203,7 @@ namespace Tutorial
         /// <summary>
         /// This event handler is invoked by Solace Systems Messaging API when a flwo event happens
         /// </summary>
-        public void HandleFlowEvent(object sender, FlowEventArgs args)
+        static void HandleFlowEvent(object sender, FlowEventArgs args)
         {
             // Received a flow event
             Console.WriteLine($"Received Flow Event '{args.Event}' Type: '{args.ResponseCode}' Text: '{args.Info}'");

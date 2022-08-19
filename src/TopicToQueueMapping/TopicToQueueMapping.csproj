@@ -8,7 +8,13 @@
     <Product>Tutorial</Product>
     <Copyright>Copyright © Solace Corp 2022</Copyright>
   </PropertyGroup>
+  <PropertyGroup>
+    <OutDir>../bin</OutDir>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="SolaceSystems.Solclient.Messaging" Version="10.17.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\~Shared\SolaceCLI\SolaceCLI.csproj" />
   </ItemGroup>
 </Project>

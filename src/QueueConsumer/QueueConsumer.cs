@@ -21,8 +21,10 @@
 
 using System;
 using System.Text;
-using SolaceSystems.Solclient.Messaging;
 using System.Threading;
+
+using SolaceSystems.Solclient.Messaging;
+using Tutorial.Common;
 
 /// <summary>
 /// Solace Systems Messaging API tutorial: QueueConsumer
@@ -35,10 +37,18 @@ namespace Tutorial
     /// </summary>
     class QueueConsumer
     {
-        const int DefaultConnectRetries = 3;
-        private readonly AutoResetEvent messageReceivedEvent = new AutoResetEvent(false);
+        static readonly int DefaultConnectRetries = 3;
+        static readonly AutoResetEvent MessageReceivedEvent = new AutoResetEvent(false);
 
-        public void Run(string host, string vpnname, string username, string password)
+        static void Main(string[] args)
+        {
+            if (CommandLine.TryLoadConfig(args, out var config))
+            {
+                Run(config.Host, config.Vpn, config.UserName, config.Password);
+            }
+        }
+
+        static void Run(string host, string vpnname, string username, string password)
         {
             try
             {
@@ -98,7 +108,7 @@ namespace Tutorial
                                 flow.Start();
 
                                 Console.WriteLine($"Waiting for a message in the queue '{queueName}'...");
-                                messageReceivedEvent.WaitOne();
+                                MessageReceivedEvent.WaitOne();
                             }
                         }
                     }
@@ -121,7 +131,7 @@ namespace Tutorial
         /// </summary>
         /// <param name="source"></param>
         /// <param name="args"></param>
-        private void HandleMessageEvent(object source, MessageEventArgs args)
+        static void HandleMessageEvent(object source, MessageEventArgs args)
         {
             var flow = source as IFlow;
 
@@ -134,11 +144,11 @@ namespace Tutorial
                 // ACK the message
                 flow.Ack(message.ADMessageId);
                 // finish the program
-                messageReceivedEvent.Set();
+                MessageReceivedEvent.Set();
             }
         }
 
-        public void HandleFlowEvent(object sender, FlowEventArgs args)
+        static void HandleFlowEvent(object sender, FlowEventArgs args)
         {
             // Received a flow event
             Console.WriteLine($"Received Flow Event '{args.Event}' Type: '{args.ResponseCode}' Text: '{args.Info}'");

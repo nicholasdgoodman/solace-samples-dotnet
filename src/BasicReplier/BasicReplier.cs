@@ -21,8 +21,10 @@
 
 using System;
 using System.Text;
-using SolaceSystems.Solclient.Messaging;
 using System.Threading;
+
+using SolaceSystems.Solclient.Messaging;
+using Tutorial.Common;
 
 /// <summary>
 /// Solace Systems Messaging API tutorial: BasicReplier
@@ -35,10 +37,18 @@ namespace Tutorial
     /// </summary>
     class BasicReplier
     {
-        const int DefaultConnectRetries = 3;
-        private readonly AutoResetEvent messageReceivedEvent = new AutoResetEvent(false);
+        static readonly int DefaultConnectRetries = 3;
+        static readonly AutoResetEvent MessageReceivedEvent = new AutoResetEvent(false);
 
-        public void Run(string host, string vpnname, string username, string password)
+        static void Main(string[] args)
+        {
+            if (CommandLine.TryLoadConfig(args, out var config))
+            {
+                Run(config.Host, config.Vpn, config.UserName, config.Password);
+            }
+        }
+
+        static void Run(string host, string vpnname, string username, string password)
         {
             try
             {
@@ -76,7 +86,7 @@ namespace Tutorial
                             session.Subscribe(topic, true);
 
                             Console.WriteLine("Waiting for a request to come in...");
-                            messageReceivedEvent.WaitOne();
+                            MessageReceivedEvent.WaitOne();
                         }
                     }
                     else
@@ -93,15 +103,12 @@ namespace Tutorial
             Console.WriteLine("Finished.");
         }
 
-
-
-
         /// <summary>
         /// This event handler is invoked by Solace Systems Messaging API when a message arrives
         /// </summary>
         /// <param name="source"></param>
         /// <param name="args"></param>
-        private void HandleRequestMessage(object source, MessageEventArgs args)
+        static void HandleRequestMessage(object source, MessageEventArgs args)
         { 
             Console.WriteLine("Received request.");
             var session = source as ISession;
@@ -127,11 +134,9 @@ namespace Tutorial
                         Console.WriteLine($"Reply failed, return code: {sendReplyResult}");
                     }
                     // finish the program
-                    messageReceivedEvent.Set();
+                    MessageReceivedEvent.Set();
                 }
             }
         }
-
     }
-
 }

@@ -21,9 +21,11 @@
 
 using System;
 using System.Text;
-using SolaceSystems.Solclient.Messaging;
 using System.Threading;
 using System.Collections.Generic;
+
+using SolaceSystems.Solclient.Messaging;
+using Tutorial.Common;
 
 /// <summary>
 /// Solace Systems Messaging API tutorial: ConfirmedPublish
@@ -36,27 +38,18 @@ namespace Tutorial
     /// </summary>
     class ConfirmedPublish
     {
-        const int DefaultConnectRetries = 3;
-        const int TotalMessages = 5;
-
-        CountdownEvent CountdownEvent = new CountdownEvent(TotalMessages);
-
-        class MsgInfo
+        static readonly int DefaultConnectRetries = 3;
+        static readonly int TotalMessages = 5;
+        static readonly CountdownEvent CountdownEvent = new CountdownEvent(TotalMessages);
+        static void Main(string[] args)
         {
-            public bool Acked { get; set; }
-            public bool Accepted { get; set; }
-            public readonly IMessage Message;
-            public readonly int Id;
-            public MsgInfo(IMessage message, int id)
+            if (CommandLine.TryLoadConfig(args, out var config))
             {
-                Acked = false;
-                Accepted = false;
-                Message = message;
-                Id = id;
+                Run(config.Host, config.Vpn, config.UserName, config.Password);
             }
         }
 
-        public void Run(string host, string vpnname, string username, string password)
+        static void Run(string host, string vpnname, string username, string password)
         {
             try
             {
@@ -168,7 +161,7 @@ namespace Tutorial
             Console.WriteLine("Finished.");
         }
 
-        public void HandleSessionEvent(object sender, SessionEventArgs args)
+        static void HandleSessionEvent(object sender, SessionEventArgs args)
         {
             // Received a session event
             Console.WriteLine($"Received session event. Event Type = {args.Event}.");
@@ -187,6 +180,21 @@ namespace Tutorial
                     break;
                 default:
                     break;
+            }
+        }
+        
+        class MsgInfo
+        {
+            public bool Acked { get; set; }
+            public bool Accepted { get; set; }
+            public readonly IMessage Message;
+            public readonly int Id;
+            public MsgInfo(IMessage message, int id)
+            {
+                Acked = false;
+                Accepted = false;
+                Message = message;
+                Id = id;
             }
         }
     }

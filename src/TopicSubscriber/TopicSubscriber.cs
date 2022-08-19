@@ -21,8 +21,10 @@
 
 using System;
 using System.Text;
-using SolaceSystems.Solclient.Messaging;
 using System.Threading;
+
+using SolaceSystems.Solclient.Messaging;
+using Tutorial.Common;
 
 /// <summary>
 /// Solace Systems Messaging API tutorial: TopicSubscriber
@@ -35,13 +37,21 @@ namespace Tutorial
     /// </summary>
     class TopicSubscriber
     {
-        const int DefaultConnectRetries = 3;
-        private readonly AutoResetEvent messageReceivedEvent = new AutoResetEvent(false);
+        static readonly int DefaultConnectRetries = 3;
+        static readonly AutoResetEvent MessageReceivedEvent = new AutoResetEvent(false);
+
+        static void Main(string[] args)
+        {
+            if(CommandLine.TryLoadConfig(args, out var config))
+            {
+                Run(config.Host, config.Vpn, config.UserName, config.Password);
+            }
+        }
 
         /// <summary>
         /// Runs the subscription demo on the given host and VPN
         /// </summary>
-        public void Run(string host, string vpnname, string username, string password)
+        static void Run(string host, string vpnname, string username, string password)
         {
             try
             {
@@ -79,7 +89,7 @@ namespace Tutorial
                             session.Subscribe(topic, true);
 
                             Console.WriteLine("Waiting for a message to be published...");
-                            messageReceivedEvent.WaitOne();
+                            MessageReceivedEvent.WaitOne();
                         }
                     }
                     else
@@ -100,7 +110,7 @@ namespace Tutorial
         /// <summary>
         /// This event handler is invoked by Solace Systems Messaging API when a message arrives
         /// </summary>
-        private void HandleMessage(object source, MessageEventArgs args)
+        static void HandleMessage(object source, MessageEventArgs args)
         {
             Console.WriteLine("Received published message.");
             // Received a message
@@ -109,7 +119,7 @@ namespace Tutorial
                 // Expecting the message content as a binary attachment
                 Console.WriteLine($"Message content: {Encoding.UTF8.GetString(message.BinaryAttachment)}");
                 // finish the program
-                messageReceivedEvent.Set();
+                MessageReceivedEvent.Set();
             }
         }
     }

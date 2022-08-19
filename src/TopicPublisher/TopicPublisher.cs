@@ -21,7 +21,10 @@
 
 using System;
 using System.Text;
+
 using SolaceSystems.Solclient.Messaging;
+using Tutorial.Common;
+
 
 /// <summary>
 /// Solace Systems Messaging API tutorial: TopicPublisher
@@ -34,12 +37,20 @@ namespace Tutorial
     /// </summary>
     class TopicPublisher
     {
-        const int DefaultConnectRetries = 3;
+        static readonly int DefaultConnectRetries = 3;
+
+        static void Main(string[] args)
+        {
+            if (CommandLine.TryLoadConfig(args, out var config))
+            {
+                Run(config.Host, config.Vpn, config.UserName, config.Password);
+            }
+        }
 
         /// <summary>
         /// Runs the subscription demo on the given host and VPN
         /// </summary>
-        public void Run(string host, string vpnname, string username, string password)
+        static void Run(string host, string vpnname, string username, string password)
         {
             try
             {
