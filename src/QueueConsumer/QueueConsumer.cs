@@ -20,6 +20,7 @@
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Text;
 using System.Threading;
 
@@ -38,7 +39,13 @@ namespace Tutorial
     class QueueConsumer
     {
         static readonly int DefaultConnectRetries = 3;
-        static readonly AutoResetEvent MessageReceivedEvent = new AutoResetEvent(false);
+        static readonly CancellationToken EventProcessCancellationToken = new CancellationToken();
+
+        const int ProcessingTimeMs = 500;
+        const int EventProcessThreadCount = 4;
+        const int MaxUnackedMessages = EventProcessThreadCount * 4;
+
+        static readonly BlockingCollection<(IFlow,IMessage)> LocalMessageQueue = new BlockingCollection<(IFlow, IMessage)>();
 
         static void Main(string[] args)
         {
@@ -100,15 +107,26 @@ namespace Tutorial
 
                             var flowProperties = new FlowProperties()
                             {
-                                AckMode = MessageAckMode.ClientAck
+                                AckMode = MessageAckMode.ClientAck,
+                                MaxUnackedMessages = 8
                             };
 
                             using (var flow = session.CreateFlow(flowProperties, queue, null, HandleMessageEvent, HandleFlowEvent))
                             {
-                                flow.Start();
-
-                                Console.WriteLine($"Waiting for a message in the queue '{queueName}'...");
-                                MessageReceivedEvent.WaitOne();
+                              for(var n = 0; n < EventProcessThreadCount; n++)
+                              {
+                                var processMessageThread = new Thread(o => ProcessMessageThread());
+                                processMessageThread.Start();
+                              }
+                              flow.Start();
+                              while(true)
+                              {
+                                if(LocalMessageQueue.Count == 0)
+                                {
+                                  Console.WriteLine($"Local message queue idle, waiting for messages from '{queueName}'...");
+                                }
+                                Thread.Sleep(5000);
+                              }
                             }
                         }
                     }
@@ -116,6 +134,7 @@ namespace Tutorial
                     {
                         Console.WriteLine($"Error connecting, return code: {connectResult}");
                     }
+
                 }
             }
             finally
@@ -133,25 +152,35 @@ namespace Tutorial
         /// <param name="args"></param>
         static void HandleMessageEvent(object source, MessageEventArgs args)
         {
-            var flow = source as IFlow;
+            Console.WriteLine("Received message from broker.");
 
-            // Received a message
-            Console.WriteLine("Received message.");
-            using (IMessage message = args.Message)
-            {
-                // Expecting the message content as a binary attachment
-                Console.WriteLine($"Message content: {Encoding.UTF8.GetString(message.BinaryAttachment)}");
-                // ACK the message
-                flow.Ack(message.ADMessageId);
-                // finish the program
-                MessageReceivedEvent.Set();
-            }
+            var flow = source as IFlow;
+            var message = args.Message;
+
+            LocalMessageQueue.Add((flow, message));
         }
 
         static void HandleFlowEvent(object sender, FlowEventArgs args)
         {
             // Received a flow event
             Console.WriteLine($"Received Flow Event '{args.Event}' Type: '{args.ResponseCode}' Text: '{args.Info}'");
+        }
+
+        static void ProcessMessageThread()
+        {
+          while(!EventProcessCancellationToken.IsCancellationRequested)
+          {
+            var (flow, message) = LocalMessageQueue.Take(EventProcessCancellationToken);
+
+            // Expecting the message content as a binary attachment
+            Console.WriteLine($"Processing message: {Encoding.UTF8.GetString(message.BinaryAttachment)}");
+            
+            Thread.Sleep(ProcessingTimeMs);
+
+            // ACK the message
+            flow.Ack(message.ADMessageId);
+          }
+
         }
     }
 

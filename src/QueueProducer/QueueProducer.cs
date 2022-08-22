@@ -37,6 +37,7 @@ namespace Tutorial
     class QueueProducer
     {
         static readonly int DefaultConnectRetries = 3;
+        const int MessagesToSend = 200;
 
         static void Main(string[] args)
         {
@@ -102,21 +103,26 @@ namespace Tutorial
                                 // Message's destination is the queue and the message is persistent
                                 message.Destination = queue;
                                 message.DeliveryMode = MessageDeliveryMode.Persistent;
-                                // Create the message content as a binary attachment
-                                message.BinaryAttachment = Encoding.UTF8.GetBytes("Persistent Queue Tutorial");
 
-                                // Send the message to the queue on the Solace messaging router
-                                Console.WriteLine($"Sending message to queue {queueName}...");
-                                var sendResult = session.Send(message);
-                                if (sendResult == ReturnCode.SOLCLIENT_OK)
+                                for(var i = 0; i < MessagesToSend; i++)
                                 {
-                                    // Delivery not yet confirmed. See ConfirmedPublish.cs
-                                    Console.WriteLine("Done.");
+                                  // Create the message content as a binary attachment
+                                  message.BinaryAttachment = Encoding.UTF8.GetBytes($"Message ID: {i}");
+
+                                  // Send the message to the queue on the Solace messaging router
+                                  Console.WriteLine($"Sending message to queue {queueName}...");
+                                  var sendResult = session.Send(message);
+                                  if (sendResult == ReturnCode.SOLCLIENT_OK)
+                                  {
+                                      // Delivery not yet confirmed. See ConfirmedPublish.cs
+                                      Console.WriteLine("Done.");
+                                  }
+                                  else
+                                  {
+                                      Console.WriteLine($"Sending failed, return code: {sendResult}");
+                                  }
                                 }
-                                else
-                                {
-                                    Console.WriteLine($"Sending failed, return code: {sendResult}");
-                                }
+
                             }
                         }
                     }
