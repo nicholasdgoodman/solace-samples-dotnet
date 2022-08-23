@@ -43,7 +43,7 @@ namespace Tutorial
 
         const int ProcessingTimeMs = 500;
         const int EventProcessThreadCount = 4;
-        const int MaxUnackedMessages = EventProcessThreadCount * 4;
+        const int MaxUnackedMessages = EventProcessThreadCount * 2;
 
         static readonly BlockingCollection<(IFlow,IMessage)> LocalMessageQueue = new BlockingCollection<(IFlow, IMessage)>();
 
@@ -73,6 +73,8 @@ namespace Tutorial
                     UserName = username,
                     Password = password,
                     ConnectRetries = DefaultConnectRetries,
+                    KeepAliveIntervalInMsecs = 500,
+                    KeepAliveIntervalsLimit = 4
                 };
                 
                 // Create context and session instances
@@ -108,7 +110,7 @@ namespace Tutorial
                             var flowProperties = new FlowProperties()
                             {
                                 AckMode = MessageAckMode.ClientAck,
-                                MaxUnackedMessages = 8
+                                MaxUnackedMessages = MaxUnackedMessages
                             };
 
                             using (var flow = session.CreateFlow(flowProperties, queue, null, HandleMessageEvent, HandleFlowEvent))
