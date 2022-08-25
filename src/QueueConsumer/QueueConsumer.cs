@@ -22,10 +22,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Text;
+
 using System.Threading;
+using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 
 using SolaceSystems.Solclient.Messaging;
-using Tutorial.Common;
 
 /// <summary>
 /// Solace Systems Messaging API tutorial: QueueConsumer
@@ -36,26 +38,37 @@ namespace Tutorial
     /// <summary>
     /// Demonstrates how to use Solace Systems Messaging API for sending and receiving a guaranteed delivery message
     /// </summary>
-    class QueueConsumer
+    public class QueueConsumer
     {
-        static readonly int DefaultConnectRetries = 3;
-        static readonly CancellationToken EventProcessCancellationToken = new CancellationToken();
-
+        const int DefaultConnectRetries = 3;
         const int ProcessingTimeMs = 500;
-        const int EventProcessThreadCount = 4;
-        const int MaxUnackedMessages = EventProcessThreadCount * 2;
+        const int MaxDegreeOfParallelism = 4;
+        const int MaxUnackedMessages = MaxDegreeOfParallelism * 2;
 
-        static readonly BlockingCollection<(IFlow,IMessage)> LocalMessageQueue = new BlockingCollection<(IFlow, IMessage)>();
-
-        static void Main(string[] args)
+        string host;
+        string vpnname;
+        string username;
+        string password;
+        
+        ActionBlock<IMessage> processMessageActionBlock;
+        IFlow flow;
+        
+        public QueueConsumer(string host, string vpnname, string username, string password)
         {
-            if (CommandLine.TryLoadConfig(args, out var config))
+            this.host = host;
+            this.vpnname = vpnname;
+            this.username = username;
+            this.password = password;
+
+            var processMessageOptions = new ExecutionDataflowBlockOptions()
             {
-                Run(config.Host, config.Vpn, config.UserName, config.Password);
-            }
+                MaxDegreeOfParallelism = MaxDegreeOfParallelism
+            };
+
+            this.processMessageActionBlock = new ActionBlock<IMessage>(ProcessMessage, processMessageOptions);
         }
 
-        static void Run(string host, string vpnname, string username, string password)
+        public void Run(CancellationToken cancellationToken)
         {
             try
             {
@@ -113,22 +126,10 @@ namespace Tutorial
                                 MaxUnackedMessages = MaxUnackedMessages
                             };
 
-                            using (var flow = session.CreateFlow(flowProperties, queue, null, HandleMessageEvent, HandleFlowEvent))
+                            using (this.flow = session.CreateFlow(flowProperties, queue, null, HandleMessageEvent, HandleFlowEvent))
                             {
-                              for(var n = 0; n < EventProcessThreadCount; n++)
-                              {
-                                var processMessageThread = new Thread(o => ProcessMessageThread());
-                                processMessageThread.Start();
-                              }
-                              flow.Start();
-                              while(true)
-                              {
-                                if(LocalMessageQueue.Count == 0)
-                                {
-                                  Console.WriteLine($"Local message queue idle, waiting for messages from '{queueName}'...");
-                                }
-                                Thread.Sleep(5000);
-                              }
+                              this.flow.Start();
+                              this.processMessageActionBlock.Completion.Wait(cancellationToken);
                             }
                         }
                     }
@@ -136,7 +137,6 @@ namespace Tutorial
                     {
                         Console.WriteLine($"Error connecting, return code: {connectResult}");
                     }
-
                 }
             }
             finally
@@ -152,37 +152,29 @@ namespace Tutorial
         /// </summary>
         /// <param name="source"></param>
         /// <param name="args"></param>
-        static void HandleMessageEvent(object source, MessageEventArgs args)
+        void HandleMessageEvent(object source, MessageEventArgs args)
         {
             Console.WriteLine("Received message from broker.");
 
-            var flow = source as IFlow;
             var message = args.Message;
-
-            LocalMessageQueue.Add((flow, message));
+            processMessageActionBlock.Post(message);
         }
 
-        static void HandleFlowEvent(object sender, FlowEventArgs args)
+        void HandleFlowEvent(object sender, FlowEventArgs args)
         {
             // Received a flow event
             Console.WriteLine($"Received Flow Event '{args.Event}' Type: '{args.ResponseCode}' Text: '{args.Info}'");
         }
 
-        static void ProcessMessageThread()
+        void ProcessMessage(IMessage message)
         {
-          while(!EventProcessCancellationToken.IsCancellationRequested)
-          {
-            var (flow, message) = LocalMessageQueue.Take(EventProcessCancellationToken);
-
             // Expecting the message content as a binary attachment
             Console.WriteLine($"Processing message: {Encoding.UTF8.GetString(message.BinaryAttachment)}");
-            
+
             Thread.Sleep(ProcessingTimeMs);
 
             // ACK the message
-            flow.Ack(message.ADMessageId);
-          }
-
+            this.flow.Ack(message.ADMessageId);
         }
     }
 
