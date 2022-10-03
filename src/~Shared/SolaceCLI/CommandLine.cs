@@ -49,7 +49,14 @@ namespace Tutorial.Common
             config = loadedConfig;
             return (config != null);
         }
-
+        
+        public static void WriteLine(string value)
+        {
+            var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+            var managedThreadId = string.Format("{0:X4}", System.Threading.Thread.CurrentThread.ManagedThreadId);
+            Console.WriteLine($"{timestamp} [{managedThreadId}]: {value}");
+        }
+        
         private static bool TryLoadConfig(out SolaceConfig config)
         {
             if (File.Exists(ConfigPath))

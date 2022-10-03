@@ -15,6 +15,7 @@
     <PackageReference Include="SolaceSystems.Solclient.Messaging" Version="10.17.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\SolaceSystems.Solclient.Async\SolaceSystems.Solclient.Async.csproj" />
     <ProjectReference Include="..\~Shared\SolaceCLI\SolaceCLI.csproj" />
   </ItemGroup>
 </Project>

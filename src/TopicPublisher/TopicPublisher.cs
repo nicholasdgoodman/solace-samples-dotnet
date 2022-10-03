@@ -23,6 +23,7 @@ using System;
 using System.Text;
 
 using SolaceSystems.Solclient.Messaging;
+using SolaceSystems.Solclient.Async;
 using Tutorial.Common;
 
 
@@ -50,7 +51,7 @@ namespace Tutorial
         /// <summary>
         /// Runs the subscription demo on the given host and VPN
         /// </summary>
-        static void Run(string host, string vpnname, string username, string password)
+        static async void Run(string host, string vpnname, string username, string password)
         {
             try
             {
@@ -68,19 +69,23 @@ namespace Tutorial
                     UserName = username,
                     Password = password,
                     ConnectRetries = DefaultConnectRetries,
+                    BlockWhileConnecting = false,
+                    ConnectBlocking = false,
+                    SendBlocking = false,
+                    SubscribeBlocking = false
                 };
                 
                 // Create context and session instances
                 using (var context = ContextFactory.Instance.CreateContext(contextProperties, null))
-                using (var session = context.CreateSession(sessionProperties, null, null))
+                using (var session = context.CreateSessionEx(sessionProperties))
                 {
                     // Connect to the Solace messaging router
-                    Console.WriteLine($"Connecting as {username}@{vpnname} on {host}...");
-                    var connectResult = session.Connect();
+                    CommandLine.WriteLine($"Connecting as {username}@{vpnname} on {host}...");
+                    var connectResult = await session.ConnectAsync();
 
                     if (connectResult == ReturnCode.SOLCLIENT_OK)
                     {
-                        Console.WriteLine("Session successfully connected.");
+                        CommandLine.WriteLine("Session successfully connected.");
 
                         // Create a topic and subscribe to it
                         using (var message = ContextFactory.Instance.CreateMessage())
@@ -91,20 +96,20 @@ namespace Tutorial
 
                             // Publish the message to the topic on the Solace messaging router
                             Console.WriteLine("Publishing message...");
-                            var sendResult = session.Send(message);
+                            var sendResult = await session.SendAsync(message);
                             if (sendResult == ReturnCode.SOLCLIENT_OK)
                             {
-                                Console.WriteLine("Done.");
+                                CommandLine.WriteLine("Done.");
                             }
                             else
                             {
-                                Console.WriteLine($"Publishing failed, return code: {sendResult}");
+                                CommandLine.WriteLine($"Publishing failed, return code: {sendResult}");
                             }
                         }
                     }
                     else
                     {
-                        Console.WriteLine($"Error connecting, return code: {connectResult}");
+                        CommandLine.WriteLine($"Error connecting, return code: {connectResult}");
                     }
                 }
             }
@@ -113,7 +118,7 @@ namespace Tutorial
                 // Dispose Solace Systems Messaging API
                 ContextFactory.Instance.Cleanup();
             }
-            Console.WriteLine("Finished.");
+            CommandLine.WriteLine("Finished.");
         }
     }
 }

@@ -23,6 +23,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{243E34
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SolaceCLI", "~Shared\SolaceCLI\SolaceCLI.csproj", "{A7431E00-25C1-4DB8-BDF4-93A439E0121C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SolaceSystems.Solclient.Async", "SolaceSystems.Solclient.Async\SolaceSystems.Solclient.Async.csproj", "{77E41C39-7DDC-4335-B93F-DF666327CD5B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -65,12 +67,17 @@ Global
 		{A7431E00-25C1-4DB8-BDF4-93A439E0121C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A7431E00-25C1-4DB8-BDF4-93A439E0121C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A7431E00-25C1-4DB8-BDF4-93A439E0121C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{77E41C39-7DDC-4335-B93F-DF666327CD5B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77E41C39-7DDC-4335-B93F-DF666327CD5B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77E41C39-7DDC-4335-B93F-DF666327CD5B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77E41C39-7DDC-4335-B93F-DF666327CD5B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{A7431E00-25C1-4DB8-BDF4-93A439E0121C} = {243E349D-AF35-4942-BDEE-9FD9E6D97A5B}
+		{77E41C39-7DDC-4335-B93F-DF666327CD5B} = {243E349D-AF35-4942-BDEE-9FD9E6D97A5B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {069051F5-D3C1-455C-B380-D258674D47B1}
