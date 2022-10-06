@@ -75,7 +75,7 @@ namespace Tutorial.Common
                 {
                     var result = this.Session.Provision(endpoint, props, flags, tsc);
 
-                    if (flags == ProvisionFlag.WaitForConfirm && !tsc.Task.IsCompleted)
+                    if (((flags & ProvisionFlag.WaitForConfirm) > 0) && !tsc.Task.IsCompleted)
                     {
                         tsc.SetResult(result);
                     }

@@ -9,7 +9,7 @@ namespace Tutorial.Common
         ISession Session { get; }
         Task<ReturnCode> ConnectAsync();
         Task<ReturnCode> SendAsync(IMessage message);
-
+        Task<ReturnCode> ProvisionAsync(IEndpoint endpoint, EndpointProperties props, int flags);
         Task<ReturnCode> SubscribeAsync(ISubscription subscription);
 
         event EventHandler<MessageEventArgs> MessageReceived;

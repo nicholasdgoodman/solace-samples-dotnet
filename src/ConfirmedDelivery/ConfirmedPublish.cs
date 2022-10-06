@@ -94,13 +94,12 @@ namespace Tutorial
                     {
                         CommandLine.WriteLine("Session successfully connected.");
 
-                        var queueTopic = "Q/tutorial";
-                        //var msgInfoList = new List<MsgInfo>();
+                        var queueName = "Q-tutorial";
 
                         var sendResults = new List<Task>();
-                        
+
                         // Create the queue
-                        using (var topic = ContextFactory.Instance.CreateTopic(queueTopic))
+                        using (var queue = ContextFactory.Instance.CreateQueue(queueName))
                         {
                             // Set queue permissions to "consume" and access-type to "exclusive"
                             var endpointProps = new EndpointProperties()
@@ -109,18 +108,16 @@ namespace Tutorial
                                 AccessType = EndpointProperties.EndpointAccessType.Exclusive
                             };
 
-                            // Skipping provisioning for this async demo
-
-                            //Console.WriteLine(value: $"Attempting to provision the queue '{queueName}'...");
-                            //session.Provision(queue, endpointProps,
-                            //    ProvisionFlag.IgnoreErrorIfEndpointAlreadyExists | ProvisionFlag.WaitForConfirm, null);
-                            //Console.WriteLine($"Queue '{queueName}' has been created and provisioned.");
+                            CommandLine.WriteLine(value: $"Attempting to provision the queue '{queueName}'...");
+                            await client.ProvisionAsync(queue, endpointProps,
+                                ProvisionFlag.IgnoreErrorIfEndpointAlreadyExists);
+                            CommandLine.WriteLine($"Queue '{queueName}' has been created and provisioned.");
 
                             // Create the message
                             using (var message = ContextFactory.Instance.CreateMessage())
                             {
                                 // Message's destination is the queue and the message is persistent
-                                message.Destination = topic;
+                                message.Destination = queue;
                                 message.DeliveryMode = MessageDeliveryMode.Persistent;
 
                                 // Send it to the mapped topic a few times with different content
@@ -132,7 +129,7 @@ namespace Tutorial
                                         $"Confirmed Publish Tutorial! Message ID: {messageId}");
 
                                     // Send the message to the queue on the Solace messaging router
-                                    CommandLine.WriteLine($"Sending message {messageId} to topic {queueTopic}...");
+                                    CommandLine.WriteLine($"Sending message {messageId} to queue {queueName}...");
                                     var sendTask = client.SendAsync(message);
 
                                     sendResults.Add(sendTask.ContinueWith(s =>
