@@ -22,9 +22,8 @@
 using System;
 using System.Text;
 using System.Threading;
-
+using System.Threading.Tasks;
 using SolaceSystems.Solclient.Messaging;
-using SolaceSystems.Solclient.Async;
 using Tutorial.Common;
 
 /// <summary>
@@ -45,14 +44,16 @@ namespace Tutorial
         {
             if(CommandLine.TryLoadConfig(args, out var config))
             {
-                Run(config.Host, config.Vpn, config.UserName, config.Password);
+                CommandLine.WriteLine($"Running Sample");
+                Task.Run(() => Run(config.Host, config.Vpn, config.UserName, config.Password)).Wait();
+                CommandLine.WriteLine("Sample Complete");
             }
         }
 
         /// <summary>
         /// Runs the subscription demo on the given host and VPN
         /// </summary>
-        static async void Run(string host, string vpnname, string username, string password)
+        static async Task Run(string host, string vpnname, string username, string password)
         {
             try
             {
@@ -73,16 +74,17 @@ namespace Tutorial
                     BlockWhileConnecting = false,
                     ConnectBlocking = false,
                     SendBlocking = false,
-                    SubscribeBlocking = false
+                    SubscribeBlocking = false,
+                    TopicDispatch = true
                 };
                 
                 // Create context and session instances
                 using (var context = ContextFactory.Instance.CreateContext(contextProperties, null))
-                using (var session = context.CreateSessionEx(sessionProperties))
+                using (var client = context.CreateClient(sessionProperties))
                 {
                     // Connect to the Solace messaging router
                     CommandLine.WriteLine($"Connecting as {username}@{vpnname} on {host}...");
-                    var connectResult = await session.ConnectAsync();
+                    var connectResult = await client.ConnectAsync();
 
                     if (connectResult == ReturnCode.SOLCLIENT_OK)
                     {
@@ -91,8 +93,8 @@ namespace Tutorial
                         // Create a topic and subscribe to it
                         using (var topic = ContextFactory.Instance.CreateTopic("tutorial/topic"))
                         {
-                            session.MessageReceived += HandleMessage;
-                            await session.SubscribeAsync(topic);
+                            client.MessageReceived += Client_MessageReceived;
+                            await client.SubscribeAsync(topic);
 
                             CommandLine.WriteLine("Waiting for a message to be published...");
                             MessageReceivedEvent.WaitOne();
@@ -107,26 +109,23 @@ namespace Tutorial
             finally
             {
                 // Dispose Solace Systems Messaging API
+                CommandLine.WriteLine("Cleaning up...");
                 ContextFactory.Instance.Cleanup();
             }
             CommandLine.WriteLine("Finished.");
         }
 
-
         /// <summary>
         /// This event handler is invoked by Solace Systems Messaging API when a message arrives
         /// </summary>
-        static void HandleMessage(object source, MessageEventArgs args)
+        static void Client_MessageReceived(object sender, MessageEventArgs e)
         {
-            Console.WriteLine("Received published message.");
+            CommandLine.WriteLine("Received published message.");
             // Received a message
-            using (IMessage message = args.Message)
-            {
-                // Expecting the message content as a binary attachment
-                Console.WriteLine($"Message content: {Encoding.UTF8.GetString(message.BinaryAttachment)}");
-                // finish the program
-                MessageReceivedEvent.Set();
-            }
+            // Expecting the message content as a binary attachment
+            CommandLine.WriteLine($"Message content: {Encoding.UTF8.GetString(e.Message.BinaryAttachment)}");
+            // finish the program
+            MessageReceivedEvent.Set();
         }
     }
 

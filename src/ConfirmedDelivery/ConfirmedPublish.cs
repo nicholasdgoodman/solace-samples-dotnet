@@ -25,7 +25,6 @@ using System.Threading;
 using System.Collections.Generic;
 
 using SolaceSystems.Solclient.Messaging;
-using SolaceSystems.Solclient.Async;
 using Tutorial.Common;
 using System.Threading.Tasks;
 
@@ -82,14 +81,14 @@ namespace Tutorial
                     SendBlocking = false,
                     SubscribeBlocking = false,
                 };
-                
+
                 // Create context and session instances
                 using (var context = ContextFactory.Instance.CreateContext(contextProperties, null))
-                using (var session = context.CreateSessionEx(sessionProperties))
-                {
+                using (var client = context.CreateClient(sessionProperties))
+                { 
                     // Connect to the Solace messaging router
                     CommandLine.WriteLine($"Connecting as {username}@{vpnname} on {host}...");
-                    var connectResult = await session.ConnectAsync();
+                    var connectResult = await client.ConnectAsync();
 
                     if (connectResult == ReturnCode.SOLCLIENT_OK)
                     {
@@ -134,7 +133,7 @@ namespace Tutorial
 
                                     // Send the message to the queue on the Solace messaging router
                                     CommandLine.WriteLine($"Sending message {messageId} to topic {queueTopic}...");
-                                    var sendTask = session.SendAsync(message);
+                                    var sendTask = client.SendAsync(message);
 
                                     sendResults.Add(sendTask.ContinueWith(s =>
                                     {
@@ -168,6 +167,7 @@ namespace Tutorial
             finally
             {
                 // Dispose Solace Systems Messaging API
+                CommandLine.WriteLine("Cleaning up...");
                 ContextFactory.Instance.Cleanup();
             }
             CommandLine.WriteLine("Finished.");

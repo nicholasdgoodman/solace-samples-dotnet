@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 
@@ -49,12 +50,16 @@ namespace Tutorial.Common
             config = loadedConfig;
             return (config != null);
         }
-        
+
         public static void WriteLine(string value)
         {
             var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
-            var managedThreadId = string.Format("{0:X4}", System.Threading.Thread.CurrentThread.ManagedThreadId);
-            Console.WriteLine($"{timestamp} [{managedThreadId}]: {value}");
+            var navtiveThreadId = string.Format("{0:x8}", GetCurrentWin32ThreadId());
+            var managedThreadId = string.Format("{0:x4}", System.Threading.Thread.CurrentThread.ManagedThreadId);
+            var threadType =
+                (System.Threading.Thread.CurrentThread.IsBackground ? "B" : "F") +
+                (System.Threading.Thread.CurrentThread.IsThreadPoolThread ? "P" : "N");
+            Console.WriteLine($"{timestamp} [{navtiveThreadId}:{managedThreadId}:{threadType}]: {value}");
         }
         
         private static bool TryLoadConfig(out SolaceConfig config)
@@ -108,5 +113,8 @@ namespace Tutorial.Common
             Console.WriteLine();
             return result;
         }
+
+        [DllImport("Kernel32", EntryPoint = "GetCurrentThreadId", ExactSpelling = true)]
+        public static extern int GetCurrentWin32ThreadId();
     }
 }

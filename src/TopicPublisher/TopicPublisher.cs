@@ -21,9 +21,8 @@
 
 using System;
 using System.Text;
-
+using System.Threading.Tasks;
 using SolaceSystems.Solclient.Messaging;
-using SolaceSystems.Solclient.Async;
 using Tutorial.Common;
 
 
@@ -44,14 +43,14 @@ namespace Tutorial
         {
             if (CommandLine.TryLoadConfig(args, out var config))
             {
-                Run(config.Host, config.Vpn, config.UserName, config.Password);
+                Run(config.Host, config.Vpn, config.UserName, config.Password).Wait();
             }
         }
 
         /// <summary>
         /// Runs the subscription demo on the given host and VPN
         /// </summary>
-        static async void Run(string host, string vpnname, string username, string password)
+        static async Task Run(string host, string vpnname, string username, string password)
         {
             try
             {
@@ -77,11 +76,11 @@ namespace Tutorial
                 
                 // Create context and session instances
                 using (var context = ContextFactory.Instance.CreateContext(contextProperties, null))
-                using (var session = context.CreateSessionEx(sessionProperties))
+                using (var client = context.CreateClient(sessionProperties))
                 {
                     // Connect to the Solace messaging router
                     CommandLine.WriteLine($"Connecting as {username}@{vpnname} on {host}...");
-                    var connectResult = await session.ConnectAsync();
+                    var connectResult = await client.ConnectAsync();
 
                     if (connectResult == ReturnCode.SOLCLIENT_OK)
                     {
@@ -93,10 +92,9 @@ namespace Tutorial
                         {
                             message.Destination = topic;
                             message.BinaryAttachment = Encoding.UTF8.GetBytes("Sample Message");
-
                             // Publish the message to the topic on the Solace messaging router
-                            Console.WriteLine("Publishing message...");
-                            var sendResult = await session.SendAsync(message);
+                            CommandLine.WriteLine("Publishing message...");
+                            var sendResult = await client.SendAsync(message);
                             if (sendResult == ReturnCode.SOLCLIENT_OK)
                             {
                                 CommandLine.WriteLine("Done.");
@@ -116,6 +114,7 @@ namespace Tutorial
             finally
             {
                 // Dispose Solace Systems Messaging API
+                CommandLine.WriteLine("Cleaning up...");
                 ContextFactory.Instance.Cleanup();
             }
             CommandLine.WriteLine("Finished.");
