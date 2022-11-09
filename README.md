@@ -24,6 +24,9 @@ To check out the project and build it, do the following:
   1. Open the Solution `src/SolaceExamples.sln`
   1. Designate a startup project (or projects)
   1. Start debugging by pressing F5
+  1. On the first run, the application will prompt for broker configuration information 
+  
+  * The broker configuration information is stored in `src/bin/SolaceSettings.json`. To update these settings edit or delete this file.
   
 **VS Code**
   1. Clone this GitHub repository
@@ -31,6 +34,29 @@ To check out the project and build it, do the following:
   1. `dotnet restore`
   1. `dotnet build`
   1. `dotnet run --project <ProjectName> -- [args]`
+  1. Follow the prompts and supply the requested information
+  
+  * The broker configuration information is stored in `src/bin/SolaceSettings.json`. To update these settings edit or delete this file.
+  
+**Direct Command Line Launch**
+
+After solution build, very project will generate an *.exe in the folder `src/bin/`. From this directory you can run individual projects with the following CLI usage:
+
+```
+Description:
+
+Usage:
+  <ProjectName> [options]
+
+Options:
+  init            Re-initialize the saved Solace configuration.
+  -h <h>          Solace Host
+  -v <v>          VPN Name
+  -u <u>          Username
+  -p <p>          Password
+  --version       Show version information
+  -?, -h, --help  Show help and usage information
+```
 
 ## Contributing
 
